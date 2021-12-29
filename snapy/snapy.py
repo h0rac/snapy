@@ -1,5 +1,6 @@
 import serial
 import time
+import csv
 
 class Snapy:
   def __init__(self, baud= 115200, dev="/dev/tty.usbserial-14220", x=None, y=None, z=None, offset=None, move=None, jog=200, sleep=0.5):
@@ -18,7 +19,11 @@ class Snapy:
     self.steps = None
     self.max_step_x = None
     self.max_step_y = None
-    self.sleep = sleep
+    self.sleep = sleep    
+    self.f = open('coords.csv', 'w')
+    self.writer = csv.writer(self.f)
+    headers = ['X', 'Y', 'Z']
+    self.writer.writerow(headers)
 
 
   def _send_gcode_cmd(self, cmd):
@@ -83,32 +88,34 @@ class Snapy:
     self._send_gcode_cmd(cmd)
 
 
-  def start(self):
+  def get_x_max_steps(self):
+    return self._xy_max_steps()[0]
+
+  def get_y_max_steps(self):
+    return self._xy_max_steps()[1]
+
+  def record(self, pos):
+    self.writer.writerow(pos.values())
+
+
+  def step(self, z=None, x=None, y=None, fwd=None, axis_x=None):
     if not self.jog in self.jog_speeds:
       print("[-] Unsupported jog speed, please select {}".format(self.jog_speeds))
       return -1
     self.cmd = b"G0 {}"
-    max_steps = self._xy_max_steps()
-    x_max_step = max_steps[0]
-    y_max_step = max_steps[1]
-    x = 0
-    y = 0
-    direction = True
     sign = "+"
-    end_pos = None
-    while y < y_max_step:
-      x = 0
-      while x < x_max_step:
-        if direction:
-          sign = ""
-        else:
-          sign = "-"
-        x += 1
-        cmd = "G0 X{}{} F{}".format(sign, self.offset, self.jog).encode()
-        self._send_gcode_cmd(cmd) 
-        print("[+] {} steps executed on X axis".format(x))
-      y +=1
-      direction = not direction
+    if fwd:
+      sign = ""
+    else:
+      sign = "-"
+    if axis_x:
+      cmd = "G0 X{}{} F{}".format(sign, self.offset, self.jog).encode()
+      self._send_gcode_cmd(cmd) 
+      print("[+] {} steps executed on X axis".format(x))
+      pos = self.get_current_pos()
+      self.record(pos)
+    # fwd = not fwd
+    else:
       print("[+] {} steps executed on Y axis".format(y))
       cmd = "G0 Y{} F{}".format(self.offset, self.jog).encode()
       self._send_gcode_cmd(cmd)
