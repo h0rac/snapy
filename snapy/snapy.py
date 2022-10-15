@@ -1,9 +1,10 @@
 import serial
 import time
 import csv
+import sys
 
 class Snapy:
-  def __init__(self, baud= 115200, dev="/dev/tty.usbserial-14220", x=None, y=None, z=None, offset=None, move=None, jog=200, sleep=0.5):
+  def __init__(self, baud= 115200, dev="/dev/dev_snapy_xyz", x=None, y=None, z=None, offset=None, move=None, jog=200):
     self.baud = baud
     self.device = serial.Serial(dev, baudrate= baud, timeout=3.5, writeTimeout=2.5)
     self.jog_speeds = [3000, 1500, 500, 200]
@@ -19,37 +20,37 @@ class Snapy:
     self.steps = None
     self.max_step_x = None
     self.max_step_y = None
-    self.sleep = sleep    
     self.f = open('coords.csv', 'w')
     self.writer = csv.writer(self.f)
-    headers = ['X', 'Y', 'Z']
+    headers = ['X', 'Y', 'Z', 'RESULT']
     self.writer.writerow(headers)
 
 
   def _send_gcode_cmd(self, cmd):
-    print(cmd)
+    # print(cmd)
     self.device.write(b"G91\n")    
     resp =  self.device.read_until(b'ok')
-    print(resp)
+    # print(resp)
     if b'ok' in resp:
-      print(cmd)
+      # print(cmd)
       resp = self.device.write(cmd+b"\n")
       resp =  self.device.read_until(b'ok')
-      print(resp)
+      # print(resp)
       if b'ok' in resp:
          cmd = b"G90"
-         print(cmd)
+         # print(cmd)
          resp = self.device.write(cmd+b"\n")
          resp =  self.device.read_until(b'ok')
-         print(resp)
-         if b'ok' in resp:
-            time.sleep(self.sleep)
+         # print(resp)
+         if not b'ok' in resp:
+            print("[-] error on gcode command")
+            sys.exit(1)
 
   def _send_marlin_cmd(self,cmd):   
-    print("cmd", cmd)
+    # print("cmd", cmd)
     self.device.write(cmd+b"\n")
     raw =  self.device.read_until(b'ok')
-    print("raw", raw)
+    # print("raw", raw)
     if b'ok' in raw:  
       return raw
 
@@ -79,7 +80,7 @@ class Snapy:
     temp = {k:float(v) for k,v in temp.items()}
     return temp
 
-  def go_start_position(self, curr_pos=None, last_pos=None):
+  def go_selected_position(self, curr_pos=None, last_pos=None):
     x =  curr_pos.get('X') - last_pos.get('X')
     y =  curr_pos.get('Y') - last_pos.get('Y')
     z =  curr_pos.get('Z') - last_pos.get('Z')
@@ -94,11 +95,13 @@ class Snapy:
   def get_y_max_steps(self):
     return self._xy_max_steps()[1]
 
-  def record(self, pos):
+  def record(self, pos, status=0):
+    pos["status"] = status
+    print(pos)
     self.writer.writerow(pos.values())
 
 
-  def step(self, z=None, x=None, y=None, fwd=None, axis_x=None):
+  def step(self, z=None, x=None, y=None, fwd=None, axis_x=None, status=0):
     if not self.jog in self.jog_speeds:
       print("[-] Unsupported jog speed, please select {}".format(self.jog_speeds))
       return -1
@@ -111,15 +114,11 @@ class Snapy:
     if axis_x:
       cmd = "G0 X{}{} F{}".format(sign, self.offset, self.jog).encode()
       self._send_gcode_cmd(cmd) 
-      print("[+] {} steps executed on X axis".format(x))
       pos = self.get_current_pos()
-      self.record(pos)
-    # fwd = not fwd
+      self.record(pos, status=status) 
     else:
-      print("[+] {} steps executed on Y axis".format(y))
       cmd = "G0 Y{} F{}".format(self.offset, self.jog).encode()
-      self._send_gcode_cmd(cmd)
-    return self.get_current_pos()
+      self._send_gcode_cmd(cmd)  
 
   def home(self):
     self._send_gcode_cmd(b"G53")
