@@ -80,12 +80,18 @@ class Snapy:
     temp = {k:float(v) for k,v in temp.items()}
     return temp
 
-  def go_selected_position(self, curr_pos=None, last_pos=None):
+  def go_start_position(self, curr_pos=None, last_pos=None):
     x =  curr_pos.get('X') - last_pos.get('X')
     y =  curr_pos.get('Y') - last_pos.get('Y')
     z =  curr_pos.get('Z') - last_pos.get('Z')
 
     cmd = "G0 X-{} Y-{} Z-{} F{}".format(x, y, z, self.jog).encode()
+    self._send_gcode_cmd(cmd)
+    return {"X":x, "Y": y, "Z":z}
+
+
+  def go_last_postion(self, pos=None):
+    cmd = "G0 X+{} Y+{} Z-{} F{}".format(pos.get('X'), pos.get("Y"), pos.get("Z"), self.jog).encode()
     self._send_gcode_cmd(cmd)
 
 

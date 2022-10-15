@@ -56,8 +56,8 @@ x = 0
 y = 0
 cnt = 0
 width = 0
-width_max = 15
-delay_max = 146015
+width_max = 12
+delay_max = 146001
 try_num = 0
 try_num_max = 5
 
@@ -81,7 +81,7 @@ try:
       while x < snapy.get_x_max_steps():
         delay = 146000
         while delay <= delay_max:
-          width = 9
+          width = 11
           while width <= width_max:
             try_num = 0 
             while try_num <= try_num_max:
@@ -109,7 +109,8 @@ try:
                 print("[+] Start position: {}".format(start_pos))
                 print("[+] End position: {}".format(end_pos))
                 cs.armed = 0
-                snapy.go_selected_position(curr_pos = end_pos, last_pos =start_pos)
+                diff = snapy.go_start_position(curr_pos = end_pos, last_pos =start_pos)
+                print(diff)
                 sys.exit(0)
 
 
@@ -128,7 +129,7 @@ try:
     end_pos = snapy.get_current_pos()
     print("[+] Start position: {}".format(start_pos))
     print("[+] End position: {}".format(end_pos))
-    snapy.go_selected_position(curr_pos = end_pos, last_pos =start_pos)
+    snapy.go_start_position(curr_pos = end_pos, last_pos =start_pos)
 
 except KeyboardInterrupt:
     print("Killing raiden...")
@@ -136,7 +137,8 @@ except KeyboardInterrupt:
     end_pos = snapy.get_current_pos()
     print("[+] Start position: {}".format(start_pos))
     print("[+] End position: {}".format(end_pos))
-    snapy.go_selected_position(curr_pos = end_pos, last_pos =start_pos)
+    diff = snapy.go_start_position(curr_pos = end_pos, last_pos =start_pos)
+    print(diff)
     snapy.f.close()
     snapy.device.close()
     raiden.arm(0)
