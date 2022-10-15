@@ -59,7 +59,7 @@ width = 0
 width_max = 15
 delay_max = 146015
 try_num = 0
-try_num_max = 6
+try_num_max = 5
 
 pos = None
 fwd = True
@@ -72,17 +72,17 @@ print("[+] Current position: {}".format(start_pos))
 try:
   time.sleep(1)
   while True:
-    delay = 146000
-    while delay <= delay_max:
-      width = 11
-      y = 0
-      fwd = True
-      while width <= width_max:
-        while y < snapy.get_y_max_steps():
-          x = 0
-          pos = snapy.get_current_pos()
-          snapy.record(pos)
-          while x < snapy.get_x_max_steps():
+    y = 0
+    fwd = True
+    while y < snapy.get_y_max_steps():
+      x = 0
+      pos = snapy.get_current_pos()
+      snapy.record(pos)
+      while x < snapy.get_x_max_steps():
+        delay = 146000
+        while delay <= delay_max:
+          width = 9
+          while width <= width_max:
             try_num = 0 
             while try_num <= try_num_max:
               print("width: {}, delay: {}, tries: {}".format(width, delay, try_num)) 
@@ -118,17 +118,17 @@ try:
               print("[+] Glitch cycle completed")
               cnt += 1
               try_num += 1
-            x += 1 
-            snapy.step(fwd=fwd, axis_x=True, x=x, y=y, status=status)
-          y +=1
-          fwd = not fwd
-          snapy.step(fwd=fwd, axis_x=False, x=x, y=y, status=status)
-          end_pos = snapy.get_current_pos()
-        width = width + 1
-      delay = delay +1
-      print("[+] Start position: {}".format(start_pos))
-      print("[+] End position: {}".format(end_pos))
-      snapy.go_selected_position(curr_pos = end_pos, last_pos =start_pos)
+            width = width + 1
+          delay = delay +1
+        x += 1 
+        snapy.step(fwd=fwd, axis_x=True, x=x, y=y, status=status)
+      y +=1
+      fwd = not fwd
+      snapy.step(fwd=fwd, axis_x=False, x=x, y=y, status=status)
+    end_pos = snapy.get_current_pos()
+    print("[+] Start position: {}".format(start_pos))
+    print("[+] End position: {}".format(end_pos))
+    snapy.go_selected_position(curr_pos = end_pos, last_pos =start_pos)
 
 except KeyboardInterrupt:
     print("Killing raiden...")
