@@ -80,7 +80,7 @@ class Stage(object):
     #: Feed rates the firmware is known to handle cleanly, mm/min.
     FEED_RATES = (3000, 1500, 500, 200)
 
-    def __init__(self, dev="/dev/snapy", baud=115200, feed=500, timeout=3.5,
+    def __init__(self, dev="/dev/snapy", baud=115200, feed=500, timeout=60.0,
                  z_floor=None, z_feed=100, lift_on_exit=0.0):
         """
         :param dev: serial device
@@ -108,6 +108,7 @@ class Stage(object):
         self.serial.reset_input_buffer()
         self._command("G90")          # absolute positioning, set once
         self._command("G21")          # millimetres
+        self._has_m400 = self._probe_m400()
         self._pos = self.position
 
     # ------------------------------------------------------------------ #
@@ -152,6 +153,17 @@ class Stage(object):
         if expect_ok and b"ok" not in reply:
             raise StageError("no ok for {!r}, got {!r}".format(cmd, reply))
         return reply
+
+    def _probe_m400(self):
+        """Ask once whether M400 is implemented, and drain whatever comes back."""
+        self.serial.reset_input_buffer()
+        self.serial.write(b"M400\n")
+        reply = self.serial.read_until(b"ok")
+        ok = b"ok" in reply
+        self.serial.reset_input_buffer()
+        if not ok:
+            print("[i] firmware does not answer M400; relying on M114 to sync")
+        return ok
 
     # ------------------------------------------------------------------ #
     # position
@@ -304,8 +316,17 @@ class Stage(object):
                             _override_floor=_override_floor)
 
     def wait_for_moves(self):
-        """Block until the planner buffer drains (M400)."""
-        self._command("M400")
+        """Block until the planner buffer drains.
+
+        M400 is the clean way to do this, but not every Marlin derivative
+        implements it - and one that does not simply returns nothing, leaving
+        the reply out of step for every command after it. Support is probed
+        once at connect; where it is missing, the position read in move_to
+        serves as the sync point instead, since M114 only answers once the
+        move has been planned.
+        """
+        if self._has_m400:
+            self._command("M400")
 
     def home(self, axes="XY", force_z=False):
         """Home the given axes and resync the cached position.

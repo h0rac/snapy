@@ -1,0 +1,5 @@
+# Wyniki pokrycia i artefakty budowania -- nie zrodla.
+__pycache__/
+*.pyc
+*.cover
+*.egg-info/
